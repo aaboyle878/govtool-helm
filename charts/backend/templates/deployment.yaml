@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gt-backend.fullname" . }}-deployment
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: gt-backend-app
+  template:
+    metadata:
+      labels:
+        app: gt-backend-app
+      annotations:
+        {{- if and .Values.secret.create .Values.secret.configJson }}
+        checksum/config: {{ include (print .Template.BasePath "/secret.yaml") . | sha256sum | quote }}
+        {{- end }}
+    spec:
+      containers:
+        - name: gt-backend-app
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          resources:
+            requests:
+              memory: "{{ .Values.resources.requests.memory }}"
+              cpu: "{{ .Values.resources.requests.cpu }}"
+            limits:
+              memory: "{{ .Values.resources.limits.memory }}"
+              cpu: "{{ .Values.resources.limits.cpu }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort | default 9876 }}
+              protocol: TCP
+          command: ["/usr/local/bin/vva-be"]
+          args: ["-c", "/run/secrets/config.json", "start-app"]
+          volumeMounts:
+            - name: gt-backend-volume
+              mountPath: /run/secrets/config.json
+              subPath: config.json
+              readOnly: true
+      volumes:
+        - name: gt-backend-volume
+          secret:
+            secretName: {{ .Values.secret.name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.strategy.maxUnavailable }}
