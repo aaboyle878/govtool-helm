@@ -29,7 +29,7 @@ spec:
             pathType: Prefix 
             backend:
               service:
-                name: {{ .Values.service.name | default (include "svc.fullname" .) }}
+                name: {{ .Values.pdfservice.name | default (include "svc.fullname" .) }}
                 port:
-                  number: {{ .Values.service.port }}
+                  number: {{ .Values.pdfservice.port }}
 {{- end }}
