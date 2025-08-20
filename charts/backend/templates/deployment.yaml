@@ -13,8 +13,13 @@ spec:
       labels:
         app: gt-backend-app
       annotations:
-        {{- if and .Values.secret.create .Values.secret.configJson }}
+        {{- if .Values.secret.create }}
         checksum/config: {{ include (print .Template.BasePath "/secret.yaml") . | sha256sum | quote }}
+        {{- else }}
+        {{- $s := (lookup "v1" "Secret" .Release.Namespace .Values.secret.name) -}}
+        {{- if $s }}
+        checksum/config: {{ index $s.data "config.json" | b64dec | sha256sum | quote }}
+        {{- end }}
         {{- end }}
     spec:
       containers:
